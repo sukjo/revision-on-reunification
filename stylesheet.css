@@ -13,54 +13,11 @@ body {
   overflow: hidden;
 }
 
-#column-container {
-  height: 90vh;
-  margin: var(--margin);
-  border: 5px dotted lightgreen;
-
-  cursor: move; /* fallback if grab cursor is unsupported */
-  cursor: grab;
-  cursor: -moz-grab;
-  cursor: -webkit-grab;
-
-  transform-origin: 50% 50%;
+canvas {
+  display: block;
 }
 
-#column-container:active {
-  cursor: grabbing;
-  cursor: -moz-grabbing;
-  cursor: -webkit-grabbing;
-}
-
-.column {
-  width: var(--radius);
-  height: var(--radius);
-  border-radius: 50%;
-}
-
-#rok {
-  background: radial-gradient(
-    circle,
-    rgba(0, 0, 255, 1) var(--gradient-stop),
-    rgba(0, 0, 0, 0) 70%
-  );
-
-  top: var(--margin);
-  margin: 0 auto;
-}
-
-#dprk {
-  background: radial-gradient(
-    circle,
-    rgba(255, 0, 0, 1) var(--gradient-stop),
-    rgba(0, 0, 0, 0) 70%
-  );
-  top: calc(var(--margin) + 90vh - var(--radius));
-  right: 50px;
-
-  position: absolute;
-}
-
+/* 
 #diaspora {
   background: radial-gradient(
     circle,
@@ -71,16 +28,4 @@ body {
   left: 50px;
 
   position: absolute;
-}
-
-#reunification-highway {
-  width: 2px;
-  height: 200vh;
-  background-color: black;
-  position: absolute;
-  top: 50vh;
-  left: 50vw;
-  z-index: -50;
-  transform: rotate(24deg);
-  /* transform-origin: 50% 50%; */
-}
+} */
