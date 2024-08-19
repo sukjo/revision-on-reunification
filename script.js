@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { AsciiEffect } from "three/addons/effects/AsciiEffect.js";
 
 let scene, renderer, camera, light, gui, effect;
@@ -11,7 +12,7 @@ function addLight(scene) {
   //   const light = new THREE.PointLight(0xffffff, 1);
 
   light.castShadow = true;
-  const sBound = 20; // doesn't have to be too wide as long as the camera pos remains steady (no zoom)
+  const sBound = 9; // doesn't have to be too wide as long as the camera pos remains steady (no zoom)
   light.shadow.camera.left = -sBound;
   light.shadow.camera.right = sBound;
   light.shadow.camera.top = sBound;
@@ -21,7 +22,7 @@ function addLight(scene) {
   scene.add(light);
 }
 
-function addModel(scene) {
+function addTestModel(scene) {
   const modelGeo = new THREE.BoxGeometry(2, 2, 2);
   const modelMat = new THREE.MeshStandardMaterial({
     color: 0xf2f2f2,
@@ -33,11 +34,41 @@ function addModel(scene) {
   scene.add(model);
 }
 
+function addModel(scene) {
+  const loader = new GLTFLoader();
+  loader.load(
+    "assets/arch.glb",
+    function (glb) {
+      glb.scene.traverse(function (mesh) {
+        if (mesh.isMesh) {
+          mesh.material = new THREE.MeshStandardMaterial({
+            color: 0xf2f2f2,
+            colorWrite: false,
+          });
+          mesh.castShadow = true;
+        }
+      });
+      glb.scene.rotation.set(0, Math.PI / 4, 0);
+      scene.add(glb.scene);
+    },
+    function (xhr) {
+      console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+    },
+    function (error) {
+      console.log("An error happened");
+    }
+  );
+}
+
 function addPlane(scene) {
-  const planeGeo = new THREE.PlaneGeometry(20, 20);
+  const planeGeo = new THREE.PlaneGeometry(100, 100);
   const planeMat = new THREE.ShadowMaterial({
-    opacity: 0.5,
+    opacity: 0.1,
+    // transparent: false,
   });
+  // const planeMat = new THREE.MeshStandardMaterial({
+  //   color: 0xf2f2f2,
+  // });
   const plane = new THREE.Mesh(planeGeo, planeMat);
   plane.rotation.x = -Math.PI / 2;
   plane.receiveShadow = true;
@@ -55,6 +86,9 @@ function addGUI() {
     .onChange(function (val) {
       light.shadow.blurSamples = val;
     });
+  lightFolder.add(light.position, "y", 0, 100, 1).onChange(function (val) {
+    light.position.y = val;
+  });
 }
 
 function addHelpers(scene) {
@@ -73,6 +107,9 @@ function onWindowResize() {
   camera.right = 10 * aspect;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  console.log(
+    "resized! width: " + window.innerWidth + " height: " + window.innerHeight
+  );
   //   effect.setSize(window.innerWidth, window.innerHeight);
 }
 
@@ -82,22 +119,22 @@ function onWindowResize() {
 
 function initScene() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf2f2f2);
 
-  const cBound = 15;
+  const cBound = 60;
   camera = new THREE.OrthographicCamera(
-    -cBound,
-    cBound,
-    cBound,
-    -cBound,
+    window.innerWidth / -cBound,
+    window.innerWidth / cBound,
+    window.innerHeight / cBound,
+    window.innerHeight / -cBound,
     0.1,
     100
   );
   camera.position.set(0, 10, 0);
   camera.lookAt(0, 0, 0);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0xffffff, 0);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.VSMShadowMap;
   //   renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -115,13 +152,13 @@ function initScene() {
   addLight(scene);
   addModel(scene);
   addPlane(scene);
-  //   addHelpers(scene);
-  //   addGUI();
+  // addHelpers(scene);
+  // addGUI();
 
   document.addEventListener("mousemove", (event) => {
     const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    light.position.set(mouseX * 10, 5, mouseY * -10);
+    light.position.set(mouseX * 50, 5, mouseY * -50);
     light.lookAt(0, 0, 0);
   });
 
@@ -142,3 +179,62 @@ function update() {
 
 initScene();
 update();
+
+/* -------------------------------------------------------------------------- */
+/*                                not THREE.js                                */
+/* -------------------------------------------------------------------------- */
+
+$(function () {
+  let total;
+
+  const cue = $(".cue");
+  const cueCont = $("#cueContainer");
+
+  async function loadData() {
+    try {
+      const response = await fetch("data.json");
+      const data = await response.json(); // parse
+
+      total = data.length;
+      data.forEach((item) => {
+        $("<div/>")
+          .addClass("content")
+          .appendTo($("#contentContainer"))
+          .html(item.text);
+      });
+
+      for (let i = 0; i < total; i++) {
+        let posX = (Math.random() * (cueCont.width() - 28)).toFixed();
+        let posY = (Math.random() * (cueCont.height() - 28)).toFixed();
+
+        $("<div/>")
+          .addClass("cue")
+          .appendTo(cueCont)
+          .css({
+            top: posX + "px",
+            left: posY + "px",
+            width: "2rem",
+            height: "2rem",
+          });
+      }
+
+      cue.each(function () {
+        if ($(this).is(":hover")) {
+          console.log("hovered");
+        }
+      });
+
+      // cue.on("mouseenter", function (e) {
+      //   console.log("hovered");
+      // });
+
+      // cue.on("mouseleave", function () {
+      //   console.log("not hovered");
+      // });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  loadData();
+});
