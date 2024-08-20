@@ -52,7 +52,7 @@ function addModel(scene) {
       scene.add(glb.scene);
     },
     function (xhr) {
-      console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+      // console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
     },
     function (error) {
       console.log("An error happened");
@@ -181,56 +181,83 @@ initScene();
 update();
 
 /* -------------------------------------------------------------------------- */
-/*                                not THREE.js                                */
+/*                                 not-canvas                                 */
 /* -------------------------------------------------------------------------- */
 
 $(function () {
   let total;
 
-  const cue = $(".cue");
-  const cueCont = $("#cueContainer");
-
   async function loadData() {
     try {
       const response = await fetch("data.json");
       const data = await response.json(); // parse
-
       total = data.length;
-      data.forEach((item) => {
+      console.log("total: ", total);
+
+      data.forEach((item, i) => {
         $("<div/>")
           .addClass("content")
+          .css("display", "none")
+          .attr("id", `${i}`)
           .appendTo($("#contentContainer"))
           .html(item.text);
       });
 
-      for (let i = 0; i < total; i++) {
-        let posX = (Math.random() * (cueCont.width() - 28)).toFixed();
-        let posY = (Math.random() * (cueCont.height() - 28)).toFixed();
+      /* ---------------------------- positioning cues ---------------------------- */
+      const cueCont = $("#cueContainer");
+      const spiralMaxHR = $(window).height() / 2;
+      const spiralMaxWR = $(window).width() / 2;
 
+      for (let i = 0; i < total; i++) {
+        // let x = (Math.random() * (cueCont.width() - 28)).toFixed();
+        // let y = (Math.random() * (cueCont.height() - 28)).toFixed();
+
+        const angle = i * 0.7; // spacing between points
+        const r = i * ($(window).width() / 2 / total); // horizontal spread of spiral
+
+        // polar to cartesian coords
+        const x = r * Math.cos(angle) + spiralMaxWR;
+        const y = r * Math.sin(-angle) + spiralMaxHR;
+
+        // if (y >= 0 && y <= spiralMaxH) {
         $("<div/>")
           .addClass("cue")
           .appendTo(cueCont)
           .css({
-            top: posX + "px",
-            left: posY + "px",
-            width: "2rem",
-            height: "2rem",
+            top: y + "px",
+            left: x + "px",
           });
+        // }
+
+        console.log("computed: " + $(".cue").width());
       }
 
-      cue.each(function () {
-        if ($(this).is(":hover")) {
-          console.log("hovered");
-        }
+      /* --------------------------- revealing contents --------------------------- */
+      const cue = $(".cue");
+      cue.each(function (i) {
+        $(this).on("mouseenter", function (e) {
+          console.log(data[i].text);
+          $("#contentContainer")
+            .find(`#${i}`)
+            .removeClass("hide")
+            .css("display", "block")
+            .addClass("show")
+            .on("animationend", function () {
+              $(this).css("display", "block");
+            });
+        });
+
+        $(this).on("mouseleave", function () {
+          console.log(i + " is not hovered anymore");
+          $("#contentContainer")
+            .find(`#${i}`)
+            .removeClass("show")
+            .addClass("hide")
+            .on("animationend", function () {
+              $(this).css("display", "none");
+            });
+        });
       });
-
-      // cue.on("mouseenter", function (e) {
-      //   console.log("hovered");
-      // });
-
-      // cue.on("mouseleave", function () {
-      //   console.log("not hovered");
-      // });
     } catch (error) {
       console.log(error);
     }

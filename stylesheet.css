@@ -28,6 +28,8 @@ canvas {
   height: 90%;
   top: 5%;
   left: 5%;
+
+  /* border: 2px dotted turquoise; */
 }
 
 @keyframes rotate {
@@ -47,6 +49,8 @@ canvas {
   background-position-x: center;
   background-position-y: center;
   animation: rotate 16s linear infinite;
+  width: 2rem;
+  height: 2rem;
 }
 
 #contentContainer {
@@ -58,14 +62,64 @@ canvas {
 }
 
 .content {
-  display: none;
   font-family: "Nanum Myeongjo", serif;
   font-weight: 400;
   font-style: normal;
-
   font-size: 6rem;
 
   color: rgb(144, 144, 144);
+  transition: opacity 0.75s ease;
+}
+
+.content.show {
+  animation: fadeInFromNone 0.75s forwards;
+}
+
+.content.hide {
+  animation: fadeOutToNone 0.75s forwards;
+}
+
+@keyframes fadeInFromNone {
+  0% {
+    opacity: 0;
+  }
+  1% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOutToNone {
+  0% {
+    opacity: 1;
+  }
+  1% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+button#info {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border: none;
+  box-shadow: 2px 2px 6px 1px rgba(0, 0, 0, 0.15);
+  padding: 0.5rem;
+  border-radius: 15px;
+}
+
+button#info:focus,
+button#info:active {
+  box-shadow: 2px 2px 6px 1px rgba(0, 0, 0, 0.55);
+}
+
+button:hover {
+  cursor: pointer;
 }
 
 /* 
