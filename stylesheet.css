@@ -5,17 +5,36 @@
 }
 
 :root {
-  --radius: 400px;
-  --margin: 5vh;
-  --gradient-stop: 34%;
+  --float-start: 1px;
+  --bg-color: #c4b8af;
+  --txt-color: rgb(65, 57, 57);
+  /* --bg-color: #f4efe8f2; */
   font-size: 14px;
 }
 
 body {
   overflow: hidden;
-  background-color: #f2f2f2;
+  background-color: var(--bg-color);
   width: 100vw;
   height: 100vh;
+  /* -webkit-transition: background-image 1.3s ease-in-out; */
+  /* transition: background-image 1.3s ease-in-out; */
+}
+
+.defaultBg {
+  background-image: url("/assets/stone.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-blend-mode: color-burn;
+}
+
+.mediaBg {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  /* box-shadow: 1px 1px 2rem green inset; */
+  background-blend-mode: overlay;
 }
 
 canvas {
@@ -28,29 +47,55 @@ canvas {
   height: 90%;
   top: 5%;
   left: 5%;
-
-  /* border: 2px dotted turquoise; */
+  z-index: 0;
 }
 
 @keyframes rotate {
   0% {
-    transform: rotate(180deg);
+    transform: rotate(0deg);
   }
   100% {
-    transform: rotate(-180deg);
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  0% {
+    /* filter: drop-shadow(5px 5px 9px rgba(0, 0, 0, 0.6)); */
+    transform: translatey(0px);
+  }
+  50% {
+    /* filter: drop-shadow(5px 7px 15px rgba(0, 0, 0, 0.2)); */
+    transform: translatey(var(--float-start));
+  }
+  100% {
+    /* filter: drop-shadow(5px 5px 9px rgba(0, 0, 0, 0.6)); */
+    transform: translatey(0px);
   }
 }
 
 .cue {
   position: fixed;
-  background: url("/assets/star.png") no-repeat;
-  background-size: 1.5rem;
-  background-origin: padding-box;
-  background-position-x: center;
-  background-position-y: center;
-  animation: rotate 16s linear infinite;
-  width: 2rem;
-  height: 2rem;
+  /* border: 1px solid black; */
+  animation: float 2s linear infinite;
+  /* width: 1rem;
+  height: 1rem; */
+  width: 5rem;
+  height: 5rem;
+
+  /* background-color: white; */
+  background-color: transparent;
+}
+
+.cue:hover {
+  background-color: tomato;
+  background-blend-mode: color-burn;
+  /* animation: rotate 16s linear infinite; */
+}
+
+.cue img {
+  width: 100%;
+  height: auto;
 }
 
 #contentContainer {
@@ -59,24 +104,31 @@ canvas {
   height: 100%;
   padding: 3rem;
   z-index: -5;
+
+  overflow: auto;
+  /* border: 2px dotted turquoise; */
 }
 
 .content {
+  /* border: 1px solid red; */
   font-family: "Nanum Myeongjo", serif;
   font-weight: 400;
   font-style: normal;
-  font-size: 6rem;
 
-  color: rgb(144, 144, 144);
-  transition: opacity 0.75s ease;
+  color: var(--txt-color);
+  transition: opacity 1.3s ease;
+
+  width: 90%;
+  position: absolute;
+  margin: 0 auto;
 }
 
 .content.show {
-  animation: fadeInFromNone 0.75s forwards;
+  animation: fadeInFromNone 1.3s forwards;
 }
 
 .content.hide {
-  animation: fadeOutToNone 0.75s forwards;
+  animation: fadeOutToNone 1.3s forwards;
 }
 
 @keyframes fadeInFromNone {
@@ -111,6 +163,9 @@ button#info {
   box-shadow: 2px 2px 6px 1px rgba(0, 0, 0, 0.15);
   padding: 0.5rem;
   border-radius: 15px;
+  z-index: 10;
+  background-color: var(--bg-color);
+  color: var(--txt-color);
 }
 
 button#info:focus,
@@ -122,15 +177,45 @@ button:hover {
   cursor: pointer;
 }
 
-/* 
-#diaspora {
-  background: radial-gradient(
-    circle,
-    rgba(0, 0, 0, 1) var(--gradient-stop),
-    rgba(0, 0, 0, 0) 70%
-  );
-  top: calc(var(--margin) + 90vh - var(--radius));
-  left: 50px;
-
+#infoScreen {
+  display: none;
   position: absolute;
-} */
+  width: 100vw;
+  height: 100vh;
+  z-index: 5;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: var(--txt-color);
+}
+
+#infoContainer {
+  width: 45%;
+  height: fit-content;
+  margin: 4rem auto;
+  padding: 2rem;
+  z-index: 10;
+  background-color: var(--bg-color);
+  border-radius: 10px;
+
+  font-family: "Nanum Myeongjo", serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: 1rem;
+  line-height: 1.5rem;
+
+  box-shadow: 2px 2px 6px 1px rgba(0, 0, 0, 0.15) inset;
+}
+
+@media only screen and (max-width: 760px) {
+  :root {
+    --float-start: 1px;
+    --bg-color: #f4efe8f2;
+    font-size: 16px;
+  }
+
+  #infoContainer {
+    width: 80%;
+    height: fit-content;
+    margin: 6rem auto;
+    padding: 2rem;
+  }
+}

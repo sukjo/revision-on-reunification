@@ -4,7 +4,11 @@ import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { AsciiEffect } from "three/addons/effects/AsciiEffect.js";
 
-let scene, renderer, camera, light, gui, effect;
+let scene, renderer, camera, light, controls, gui, effect;
+const cameraFrustum = 60;
+const lightFrustum = 24; // doesn't have to be too wide as long as the camera pos remains steady (no zoom)
+let targetMousePos = new THREE.Vector3();
+let currentMousePos = new THREE.Vector3();
 
 function addLight(scene) {
   light = new THREE.DirectionalLight(0xffffff, 1);
@@ -12,13 +16,14 @@ function addLight(scene) {
   //   const light = new THREE.PointLight(0xffffff, 1);
 
   light.castShadow = true;
-  const sBound = 9; // doesn't have to be too wide as long as the camera pos remains steady (no zoom)
-  light.shadow.camera.left = -sBound;
-  light.shadow.camera.right = sBound;
-  light.shadow.camera.top = sBound;
-  light.shadow.camera.bottom = -sBound;
-  light.shadow.radius = 6;
+
+  light.shadow.camera.left = -lightFrustum;
+  light.shadow.camera.right = lightFrustum;
+  light.shadow.camera.top = lightFrustum;
+  light.shadow.camera.bottom = -lightFrustum;
+  light.shadow.radius = 3; // 6
   light.shadow.blurSamples = 25;
+
   scene.add(light);
 }
 
@@ -48,7 +53,7 @@ function addModel(scene) {
           mesh.castShadow = true;
         }
       });
-      glb.scene.rotation.set(0, Math.PI / 4, 0);
+      glb.scene.rotation.set(0, Math.PI / 4.33, 0);
       scene.add(glb.scene);
     },
     function (xhr) {
@@ -82,7 +87,7 @@ function addGUI() {
     light.shadow.radius = val;
   });
   lightFolder
-    .add(light.shadow, "blurSamples", 1, 25, 1)
+    .add(light.shadow, "blurSamples", 1, 50, 1)
     .onChange(function (val) {
       light.shadow.blurSamples = val;
     });
@@ -101,15 +106,13 @@ function addHelpers(scene) {
   scene.add(axesHelper);
 }
 
-function onWindowResize() {
-  const aspect = window.innerWidth / window.innerHeight;
-  camera.left = -10 * aspect;
-  camera.right = 10 * aspect;
+function updateCameraPOV() {
+  camera.left = window.innerWidth / -cameraFrustum;
+  camera.right = window.innerWidth / cameraFrustum;
+  camera.top = window.innerHeight / cameraFrustum;
+  camera.bottom = window.innerHeight / -cameraFrustum;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  console.log(
-    "resized! width: " + window.innerWidth + " height: " + window.innerHeight
-  );
   //   effect.setSize(window.innerWidth, window.innerHeight);
 }
 
@@ -120,12 +123,11 @@ function onWindowResize() {
 function initScene() {
   scene = new THREE.Scene();
 
-  const cBound = 60;
   camera = new THREE.OrthographicCamera(
-    window.innerWidth / -cBound,
-    window.innerWidth / cBound,
-    window.innerHeight / cBound,
-    window.innerHeight / -cBound,
+    window.innerWidth / -cameraFrustum,
+    window.innerWidth / cameraFrustum,
+    window.innerHeight / cameraFrustum,
+    window.innerHeight / -cameraFrustum,
     0.1,
     100
   );
@@ -146,7 +148,8 @@ function initScene() {
   document.body.appendChild(renderer.domElement);
   //   document.body.appendChild(effect.domElement);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
+  controls = new OrbitControls(camera, renderer.domElement);
+  // controls.update();
   //   const controls = new OrbitControls(camera, effect.domElement);
 
   addLight(scene);
@@ -158,12 +161,7 @@ function initScene() {
   document.addEventListener("mousemove", (event) => {
     const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    light.position.set(mouseX * 50, 5, mouseY * -50);
-    light.lookAt(0, 0, 0);
-  });
-
-  window.addEventListener("resize", () => {
-    onWindowResize();
+    targetMousePos.set(mouseX * 50, 7, mouseY * -50);
   });
 }
 
@@ -173,6 +171,14 @@ function initScene() {
 
 function update() {
   requestAnimationFrame(update);
+
+  const damping = 0.04;
+  currentMousePos.lerp(targetMousePos, damping);
+  light.position.copy(currentMousePos);
+  light.lookAt(0, 0, 0);
+
+  // controls.update();
+
   renderer.render(scene, camera);
   //   effect.render(scene, camera);
 }
@@ -187,6 +193,68 @@ update();
 $(function () {
   let total;
 
+  const positionCues = () => {
+    const cueCont = $("#cueContainer");
+    // const spiralMaxHR = $(window).height() / 2;
+    // const spiralMaxWR = $(window).width() / 2;
+
+    cueCont.empty(); // clear cues before repositioning
+
+    for (let i = 0; i < total; i++) {
+      const angle = i * 0.7; // spacing between points
+      let r;
+      if ($(window).width() > $(window).height()) {
+        r = i * ($(window).height() / 2 / total); // vertical spread of spiral
+      } else {
+        r = i * ($(window).width() / 2 / total); // horizontal spread of spiral
+      }
+
+      let x = (Math.random() * (cueCont.width() - 28)).toFixed();
+      let y = (Math.random() * (cueCont.height() - 28)).toFixed();
+
+      // polar to cartesian coords
+      // const x = r * Math.cos(angle) + spiralMaxWR;
+      // const y = r * Math.sin(-angle) + spiralMaxHR;
+
+      const floatStart = (Math.random() * 10 - 5).toFixed(1); // Generates a value between -5 and 5
+
+      // if (y >= 0 && y <= spiralMaxHR) {
+      $("<div/>")
+        .addClass("cue")
+        .appendTo(cueCont)
+        .css({
+          top: y + "px",
+          left: x + "px",
+          "--float-start": `${floatStart}px`,
+        });
+      // .html(`<img src="/assets/star.png" />`);
+      // }
+    }
+  };
+
+  const isOverflown = ({ element, parent }) =>
+    element.height() > parent.height();
+
+  const resizeText = ({ $element, $parent }) => {
+    const minSize = 12; // px
+    const maxSize = 150;
+    let i = minSize;
+    let overflow = false;
+
+    while (!overflow && i < maxSize) {
+      $element.css("fontSize", `${i}px`);
+      overflow = isOverflown({ element: $element, parent: $parent });
+      if (!overflow) i++;
+    }
+
+    // console.log($element);
+    console.log(`element ${$element.attr("id")} height: ${$element.height()}`);
+    console.log(`parent height: ${$parent.height()}`);
+
+    $element.css("fontSize", `${i - 1}px`);
+    console.log(`text resized to ${i} px`);
+  };
+
   async function loadData() {
     try {
       const response = await fetch("data.json");
@@ -194,69 +262,86 @@ $(function () {
       total = data.length;
       console.log("total: ", total);
 
+      const contentCont = $("#contentContainer");
+
       data.forEach((item, i) => {
         $("<div/>")
           .addClass("content")
-          .css("display", "none")
           .attr("id", `${i}`)
-          .appendTo($("#contentContainer"))
+          .css("display", "none")
+          .appendTo(contentCont)
           .html(item.text);
+
+        // resizeText({
+        //   $element: $(`#${i}`),
+        //   $parent: contentCont,
+        // });
       });
 
-      /* ---------------------------- positioning cues ---------------------------- */
-      const cueCont = $("#cueContainer");
-      const spiralMaxHR = $(window).height() / 2;
-      const spiralMaxWR = $(window).width() / 2;
+      const setupCues = () => {
+        /* ---------------------------- positioning cues ---------------------------- */
+        positionCues();
 
-      for (let i = 0; i < total; i++) {
-        // let x = (Math.random() * (cueCont.width() - 28)).toFixed();
-        // let y = (Math.random() * (cueCont.height() - 28)).toFixed();
+        /* --------------------------- revealing contents --------------------------- */
+        const cue = $(".cue");
 
-        const angle = i * 0.7; // spacing between points
-        const r = i * ($(window).width() / 2 / total); // horizontal spread of spiral
+        cue.each(function (i) {
+          // const floatStart = (Math.random() * 10 - 5).toFixed(1); // Generates a value between -5 and 5
+          // $(this).css("--float-start", `${floatStart}px`);
 
-        // polar to cartesian coords
-        const x = r * Math.cos(angle) + spiralMaxWR;
-        const y = r * Math.sin(-angle) + spiralMaxHR;
+          $(this).off("mouseover mouseout"); // erase duplicate listeners
 
-        // if (y >= 0 && y <= spiralMaxH) {
-        $("<div/>")
-          .addClass("cue")
-          .appendTo(cueCont)
-          .css({
-            top: y + "px",
-            left: x + "px",
+          $(this).on("mouseover", function () {
+            // console.log(data[i].text);
+
+            if (data[i].hasOwnProperty("media")) {
+              $("body")
+                .removeClass("defaultBg")
+                .addClass("mediaBg")
+                .css({
+                  "background-image": `url("/assets/${data[i].media}")`,
+                });
+              // $("#contentContainer").find(`#${i}`).css("color", "#f4efe8f2");
+            }
+
+            contentCont
+              .find(`#${i}`)
+              .removeClass("hide")
+              .css("display", "block")
+              .addClass("show")
+              .on("animationend", function () {
+                $(this).css("display", "block");
+              });
+
+            resizeText({
+              $element: $(`#${i}`),
+              $parent: contentCont,
+            });
           });
-        // }
 
-        console.log("computed: " + $(".cue").width());
-      }
+          $(this).on("mouseout", function () {
+            // console.log(i + " is not hovered anymore");
 
-      /* --------------------------- revealing contents --------------------------- */
-      const cue = $(".cue");
-      cue.each(function (i) {
-        $(this).on("mouseenter", function (e) {
-          console.log(data[i].text);
-          $("#contentContainer")
-            .find(`#${i}`)
-            .removeClass("hide")
-            .css("display", "block")
-            .addClass("show")
-            .on("animationend", function () {
-              $(this).css("display", "block");
-            });
+            $("body")
+              .removeClass("mediaBg")
+              .addClass("defaultBg")
+              .css("background-image", `url("/assets/stone.png")`);
+
+            contentCont
+              .find(`#${i}`)
+              .removeClass("show")
+              .addClass("hide")
+              .on("animationend", function () {
+                $(this).css("display", "none");
+              });
+          });
         });
+      };
 
-        $(this).on("mouseleave", function () {
-          console.log(i + " is not hovered anymore");
-          $("#contentContainer")
-            .find(`#${i}`)
-            .removeClass("show")
-            .addClass("hide")
-            .on("animationend", function () {
-              $(this).css("display", "none");
-            });
-        });
+      setupCues();
+
+      window.addEventListener("resize", () => {
+        setupCues();
       });
     } catch (error) {
       console.log(error);
@@ -264,4 +349,39 @@ $(function () {
   }
 
   loadData();
+
+  /* ------------------------------- responsive ------------------------------- */
+  window.addEventListener("resize", () => {
+    updateCameraPOV();
+    positionCues();
+  });
+
+  /* ------------------------------- info modal ------------------------------- */
+  let isModalVis = false;
+
+  $("#info").on("click", function () {
+    isModalVis = !isModalVis;
+    if (isModalVis) {
+      $("#infoScreen").css("display", "flex");
+      $(this).html("close");
+    } else {
+      $("#infoScreen").css("display", "none");
+      $(this).html("info");
+    }
+  });
+
+  window.addEventListener("click", (event) => {
+    if (
+      (isModalVis && event.target.id === "infoScreen") ||
+      event.target.id === "#info"
+    ) {
+      isModalVis = false;
+      $("#infoScreen").css("display", "none");
+      $("#info").html("info");
+    }
+  });
+
+  $("#infoContainer").on("click", function (event) {
+    event.stopPropagation();
+  });
 });
