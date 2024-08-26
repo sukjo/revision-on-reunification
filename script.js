@@ -299,7 +299,7 @@ $(function () {
                 .removeClass("defaultBg")
                 .addClass("mediaBg")
                 .css({
-                  "background-image": `url("/assets/${data[i].media}")`,
+                  "background-image": `url("./assets/${data[i].media}")`,
                 });
               // $("#contentContainer").find(`#${i}`).css("color", "#f4efe8f2");
             }
@@ -325,7 +325,7 @@ $(function () {
             $("body")
               .removeClass("mediaBg")
               .addClass("defaultBg")
-              .css("background-image", `url("/assets/stone.png")`);
+              .css("background-image", `url("./assets/stone.png")`);
 
             contentCont
               .find(`#${i}`)
