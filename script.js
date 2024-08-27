@@ -2,13 +2,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { AsciiEffect } from "three/addons/effects/AsciiEffect.js";
 
-let scene, renderer, camera, light, controls, gui, effect;
+let scene, renderer, camera, light, controls, gui;
 const cameraFrustum = 60;
 const lightFrustum = 24; // doesn't have to be too wide as long as the camera pos remains steady (no zoom)
 let targetMousePos = new THREE.Vector3();
 let currentMousePos = new THREE.Vector3();
+let clientX, clientY;
 
 function addLight(scene) {
   light = new THREE.DirectionalLight(0xffffff, 1);
@@ -113,7 +113,6 @@ function updateCameraPOV() {
   camera.bottom = window.innerHeight / -cameraFrustum;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  //   effect.setSize(window.innerWidth, window.innerHeight);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -142,27 +141,16 @@ function initScene() {
   //   renderer.shadowMap.type = THREE.PCFShadowMap;
   //   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  effect = new AsciiEffect(renderer, "#OX. ", { invert: true });
-  effect.setSize(window.innerWidth, window.innerHeight);
-
   document.body.appendChild(renderer.domElement);
-  //   document.body.appendChild(effect.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
   // controls.update();
-  //   const controls = new OrbitControls(camera, effect.domElement);
 
   addLight(scene);
   addModel(scene);
   addPlane(scene);
   // addHelpers(scene);
   // addGUI();
-
-  document.addEventListener("mousemove", (event) => {
-    const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-    const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    targetMousePos.set(mouseX * 50, 7, mouseY * -50);
-  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -180,7 +168,6 @@ function update() {
   // controls.update();
 
   renderer.render(scene, camera);
-  //   effect.render(scene, camera);
 }
 
 initScene();
@@ -192,6 +179,7 @@ update();
 
 $(function () {
   let total;
+  const contentCont = $("#contentContainer");
 
   const positionCues = () => {
     const cueCont = $("#cueContainer");
@@ -201,13 +189,13 @@ $(function () {
     cueCont.empty(); // clear cues before repositioning
 
     for (let i = 0; i < total; i++) {
-      const angle = i * 0.7; // spacing between points
-      let r;
-      if ($(window).width() > $(window).height()) {
-        r = i * ($(window).height() / 2 / total); // vertical spread of spiral
-      } else {
-        r = i * ($(window).width() / 2 / total); // horizontal spread of spiral
-      }
+      // const angle = i * 0.7; // spacing between points
+      // let r;
+      // if ($(window).width() > $(window).height()) {
+      //   r = i * ($(window).height() / 2 / total); // vertical spread of spiral
+      // } else {
+      //   r = i * ($(window).width() / 2 / total); // horizontal spread of spiral
+      // }
 
       let x = (Math.random() * (cueCont.width() - 28)).toFixed();
       let y = (Math.random() * (cueCont.height() - 28)).toFixed();
@@ -221,6 +209,11 @@ $(function () {
       // if (y >= 0 && y <= spiralMaxHR) {
       $("<div/>")
         .addClass("cue")
+        .attr({
+          tabindex: "0",
+          role: "button",
+          "aria-pressed": "false",
+        })
         .appendTo(cueCont)
         .css({
           top: y + "px",
@@ -247,12 +240,112 @@ $(function () {
       if (!overflow) i++;
     }
 
-    // console.log($element);
-    console.log(`element ${$element.attr("id")} height: ${$element.height()}`);
-    console.log(`parent height: ${$parent.height()}`);
-
     $element.css("fontSize", `${i - 1}px`);
-    console.log(`text resized to ${i} px`);
+  };
+
+  const setupCues = (data) => {
+    positionCues();
+
+    const cue = $(".cue");
+
+    cue.each(function (i) {
+      // const floatStart = (Math.random() * 10 - 5).toFixed(1); // Generates a value between -5 and 5
+      // $(this).css("--float-start", `${floatStart}px`);
+
+      $(this).off("mouseover mouseout"); // erase duplicate listeners
+
+      $(this).on("mouseover focus", function () {
+        // console.log(data[i].text);
+
+        if (data[i].hasOwnProperty("media")) {
+          $("body")
+            .removeClass("defaultBg")
+            .addClass("mediaBg")
+            .css({
+              "background-image": `url("./assets/${data[i].media}")`,
+            });
+        }
+
+        contentCont
+          .find(`#${i}`)
+          .removeClass("hide")
+          .css("display", "block")
+          .addClass("show")
+          .on("animationend", function () {
+            $(this).css("display", "block");
+          });
+
+        resizeText({
+          $element: $(`#${i}`),
+          $parent: contentCont,
+        });
+      });
+
+      $(this).on("mouseout focusout", function () {
+        // console.log(i + " is not hovered anymore");
+
+        $("body")
+          .removeClass("mediaBg")
+          .addClass("defaultBg")
+          .css("background-image", `url("./assets/stone.png")`);
+
+        contentCont
+          .find(`#${i}`)
+          .removeClass("show")
+          .addClass("hide")
+          .on("animationend", function () {
+            $(this).css("display", "none");
+          });
+      });
+    });
+
+    $(document).on("touchmove", function () {
+      cue.each(function (i) {
+        const cueBounds = $(this)[0].getBoundingClientRect();
+        if (
+          clientX >= cueBounds.left &&
+          clientX <= cueBounds.right &&
+          clientY >= cueBounds.top &&
+          clientY <= cueBounds.bottom
+        ) {
+          // console.log(`cue ${i} overlapped`);
+          if (data[i].hasOwnProperty("media")) {
+            $("body")
+              .removeClass("defaultBg")
+              .addClass("mediaBg")
+              .css({
+                "background-image": `url("./assets/${data[i].media}")`,
+              });
+          }
+
+          contentCont
+            .find(`#${i}`)
+            .removeClass("hide")
+            .css("display", "block")
+            .addClass("show")
+            .on("animationend", function () {
+              $(this).css("display", "block");
+            });
+
+          resizeText({
+            $element: $(`#${i}`),
+            $parent: contentCont,
+          });
+        } else {
+          $("body")
+            .removeClass("mediaBg")
+            .addClass("defaultBg")
+            .css("background-image", `url("./assets/stone.png")`);
+          contentCont
+            .find(`#${i}`)
+            .removeClass("show")
+            .addClass("hide")
+            .on("animationend", function () {
+              $(this).css("display", "none");
+            });
+        }
+      });
+    });
   };
 
   async function loadData() {
@@ -260,9 +353,7 @@ $(function () {
       const response = await fetch("data.json");
       const data = await response.json(); // parse
       total = data.length;
-      console.log("total: ", total);
-
-      const contentCont = $("#contentContainer");
+      // console.log("total: ", total);
 
       data.forEach((item, i) => {
         $("<div/>")
@@ -271,77 +362,12 @@ $(function () {
           .css("display", "none")
           .appendTo(contentCont)
           .html(item.text);
-
-        // resizeText({
-        //   $element: $(`#${i}`),
-        //   $parent: contentCont,
-        // });
       });
 
-      const setupCues = () => {
-        /* ---------------------------- positioning cues ---------------------------- */
-        positionCues();
+      setupCues(data);
 
-        /* --------------------------- revealing contents --------------------------- */
-        const cue = $(".cue");
-
-        cue.each(function (i) {
-          // const floatStart = (Math.random() * 10 - 5).toFixed(1); // Generates a value between -5 and 5
-          // $(this).css("--float-start", `${floatStart}px`);
-
-          $(this).off("mouseover mouseout"); // erase duplicate listeners
-
-          $(this).on("mouseover", function () {
-            // console.log(data[i].text);
-
-            if (data[i].hasOwnProperty("media")) {
-              $("body")
-                .removeClass("defaultBg")
-                .addClass("mediaBg")
-                .css({
-                  "background-image": `url("./assets/${data[i].media}")`,
-                });
-              // $("#contentContainer").find(`#${i}`).css("color", "#f4efe8f2");
-            }
-
-            contentCont
-              .find(`#${i}`)
-              .removeClass("hide")
-              .css("display", "block")
-              .addClass("show")
-              .on("animationend", function () {
-                $(this).css("display", "block");
-              });
-
-            resizeText({
-              $element: $(`#${i}`),
-              $parent: contentCont,
-            });
-          });
-
-          $(this).on("mouseout", function () {
-            // console.log(i + " is not hovered anymore");
-
-            $("body")
-              .removeClass("mediaBg")
-              .addClass("defaultBg")
-              .css("background-image", `url("./assets/stone.png")`);
-
-            contentCont
-              .find(`#${i}`)
-              .removeClass("show")
-              .addClass("hide")
-              .on("animationend", function () {
-                $(this).css("display", "none");
-              });
-          });
-        });
-      };
-
-      setupCues();
-
-      window.addEventListener("resize", () => {
-        setupCues();
+      $(window).on("resize", () => {
+        setupCues(data);
       });
     } catch (error) {
       console.log(error);
@@ -350,8 +376,24 @@ $(function () {
 
   loadData();
 
-  /* ------------------------------- responsive ------------------------------- */
-  window.addEventListener("resize", () => {
+  /* ------------------------ on mousemove or touchmove ----------------------- */
+
+  $(document).on("mousemove touchmove", function (ev) {
+    if (ev.type === "touchmove") {
+      clientX = ev.originalEvent.touches[0].clientX;
+      clientY = ev.originalEvent.touches[0].clientY;
+    } else {
+      clientX = ev.clientX;
+      clientY = ev.clientY;
+    }
+
+    const mouseX = (clientX / window.innerWidth) * 2 - 1;
+    const mouseY = -(clientY / window.innerHeight) * 2 + 1;
+    targetMousePos.set(mouseX * 50, 7, mouseY * -50);
+  });
+
+  /* ------------------------------ window resize ----------------------------- */
+  $(window).on("resize", () => {
     updateCameraPOV();
     positionCues();
   });
@@ -370,15 +412,20 @@ $(function () {
     }
   });
 
-  window.addEventListener("click", (event) => {
-    if (
-      (isModalVis && event.target.id === "infoScreen") ||
-      event.target.id === "#info"
-    ) {
+  $(window).on("click", (event) => {
+    if (isModalVis && event.target.id === "infoScreen") {
       isModalVis = false;
       $("#infoScreen").css("display", "none");
       $("#info").html("info");
     }
+  });
+
+  $(window).one("click", () => {
+    $("#mobileModal").css("display", "none");
+  });
+
+  $(window).on("touchstart", () => {
+    $("#mobileModal").css("display", "none");
   });
 
   $("#infoContainer").on("click", function (event) {
