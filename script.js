@@ -27,18 +27,6 @@ function addLight(scene) {
   scene.add(light);
 }
 
-function addTestModel(scene) {
-  const modelGeo = new THREE.BoxGeometry(2, 2, 2);
-  const modelMat = new THREE.MeshStandardMaterial({
-    color: 0xf2f2f2,
-    colorWrite: false,
-  });
-  const model = new THREE.Mesh(modelGeo, modelMat);
-  model.castShadow = true;
-  model.position.y = 2;
-  scene.add(model);
-}
-
 function addModel(scene) {
   const loader = new GLTFLoader();
   loader.load(
@@ -143,7 +131,7 @@ function initScene() {
 
   document.body.appendChild(renderer.domElement);
 
-  controls = new OrbitControls(camera, renderer.domElement);
+  // controls = new OrbitControls(camera, renderer.domElement);
   // controls.update();
 
   addLight(scene);
